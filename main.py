@@ -1,10 +1,16 @@
 import struct
 import hashlib
 
+
 class CompactSizeEncoder:
+    """
+    Encodes an integer into Bitcoin's CompactSize format.
+    """
+
     def encode(self, value: int) -> bytes:
         if not isinstance(value, int):
             raise ValueError("Value must be an integer.")
+
         if value < 0 or value > 0xFFFFFFFFFFFFFFFF:
             raise ValueError("Value must fit within u64 range.")
 
@@ -19,6 +25,10 @@ class CompactSizeEncoder:
 
 
 class CompactSizeDecoder:
+    """
+    Decodes Bitcoin's CompactSize bytes into an integer.
+    """
+
     def decode(self, data: bytes) -> tuple[int, int]:
         if not data:
             raise ValueError("Data is too short to decode CompactSize.")
@@ -30,23 +40,27 @@ class CompactSizeDecoder:
 
         elif first_byte == 0xFD:
             if len(data) < 3:
-                raise ValueError("Data is too short for CompactSize uint16.")
-            return int.from_bytes(data[1:3], "little"), 3
+                raise ValueError("Data too short")
+            return int.from_bytes(data[1:3], byteorder="little"), 3
 
         elif first_byte == 0xFE:
             if len(data) < 5:
-                raise ValueError("Data is too short for CompactSize uint32.")
-            return int.from_bytes(data[1:5], "little"), 5
+                raise ValueError("Data too short")
+            return int.from_bytes(data[1:5], byteorder="little"), 5
 
         elif first_byte == 0xFF:
             if len(data) < 9:
-                raise ValueError("Data is too short for CompactSize uint64.")
-            return int.from_bytes(data[1:9], "little"), 9
+                raise ValueError("Data too short")
+            return int.from_bytes(data[1:9], byteorder="little"), 9
 
         raise ValueError("Invalid CompactSize prefix.")
 
 
 class TransactionData:
+    """
+    A class to represent and manage simplified Bitcoin transaction data.
+    """
+
     def __init__(self, version: int = 1, lock_time: int = 0):
         self.version = version
         self.inputs = []
@@ -54,19 +68,26 @@ class TransactionData:
         self.lock_time = lock_time
         self.metadata = {}
 
-    def add_input(self, tx_id: str, vout_index: int,
-                  script_sig: str, sequence: int = 0xFFFFFFFF):
+    def add_input(
+        self,
+        tx_id: str,
+        vout_index: int,
+        script_sig: str,
+        sequence: int = 0xFFFFFFFF
+    ):
         tx_input = {
             "prev_txid": tx_id,
             "prev_vout": vout_index,
             "script_sig": script_sig,
             "sequence": sequence
         }
+
         self.inputs.append(tx_input)
         print(f"Added input: {tx_id}:{vout_index}")
 
     def add_output(self, value_satoshi: int, script_pubkey: str):
         tx_output = (value_satoshi, script_pubkey)
+
         self.outputs.append(tx_output)
         print(f"Added output: {value_satoshi} sat")
 
@@ -112,10 +133,13 @@ class TransactionData:
             total_satoshi += value
             valid_outputs_count += 1
 
-            print(f"Included output: {value} -> {script}")
+            print(f"Including output: {value} -> {script}")
 
             if total_satoshi > 1_000_000_000:
-                print("Threshold exceeded. Stopping.")
+                print(
+                    "Total satoshis exceeded 1 Billion. "
+                    "Breaking summarization."
+                )
                 break
 
         return total_satoshi, valid_outputs_count
@@ -149,22 +173,29 @@ class TransactionData:
             lock_time
         )
 
-        print(
-            f"Header updated: version={self.version}, "
-            f"lock_time={self.lock_time}"
-        )
+        print("Set header via multiple assignment")
 
 
 class UTXOSet:
+    """
+    Manages a set of UTXOs.
+    """
+
     def __init__(self):
         self.utxos = set()
 
     def add_utxo(self, tx_id: str, vout_index: int, amount: int):
         utxo = (tx_id, vout_index, amount)
+
         self.utxos.add(utxo)
         print(f"Added UTXO: {utxo}")
 
-    def remove_utxo(self, tx_id: str, vout_index: int, amount: int) -> bool:
+    def remove_utxo(
+        self,
+        tx_id: str,
+        vout_index: int,
+        amount: int
+    ) -> bool:
         utxo = (tx_id, vout_index, amount)
 
         if utxo in self.utxos:
@@ -172,6 +203,7 @@ class UTXOSet:
             print(f"Removed UTXO: {utxo}")
             return True
 
+        print("UTXO not found")
         return False
 
     def get_balance(self) -> int:
@@ -191,6 +223,7 @@ class UTXOSet:
             running_total += utxo[2]
 
             if running_total >= target_amount:
+                print("Found sufficient UTXOs")
                 return selected
 
         return set()
@@ -220,6 +253,10 @@ def generate_block_headers(
     start_nonce: int = 0,
     max_attempts: int = 1000
 ):
+    """
+    Generator that simulates block header creation.
+    """
+
     print("\n--- Generating Block Headers (using generator) ---")
 
     nonce = start_nonce
@@ -235,8 +272,9 @@ def generate_block_headers(
             "nonce": nonce
         }
 
-        header_str = str(header_data).encode()
-        header_hash = hashlib.sha256(header_str).hexdigest()
+        header_hash = hashlib.sha256(
+            str(header_data).encode()
+        ).hexdigest()
 
         print(
             f"Attempt {attempts}: "
@@ -249,4 +287,4 @@ def generate_block_headers(
         attempts += 1
 
         if attempts % 100 == 0:
-            print(f"Progress: {attempts}/{max_attempts} attempts")
+            print(f"... {attempts} attempts made ...")
