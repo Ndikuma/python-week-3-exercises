@@ -217,17 +217,18 @@ class UTXOSet:
     def find_sufficient_utxos(self, target_amount: int) -> set:
         selected = set()
         running_total = 0
-
+    
         for utxo in self.utxos:
             selected.add(utxo)
             running_total += utxo[2]
-
+    
             if running_total >= target_amount:
                 print("Found sufficient UTXOs")
                 return selected
-
+    
+        print("Could not find sufficient UTXOs")
         return set()
-
+        
     def get_total_utxo_count(self) -> int:
         return len(self.utxos)
 
@@ -260,7 +261,7 @@ def generate_block_headers(
     print("\n--- Generating Block Headers (using generator) ---")
 
     nonce = start_nonce
-    attempts = 0
+    attempts = 1
 
     while attempts < max_attempts:
         header_data = {
